@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from optparse import OptionParser
 import os, time, socket, sys, re
 #some import checks...
@@ -24,7 +24,7 @@ def ip_compare(ip_addr, scope_list):
         ip = ip_addr
     for scope in scope_list:
         if netaddr.IPAddress(ip) in netaddr.IPNetwork(scope):
-            return "in," + ip_addr + "," + ip + "," + scope + ",\r\n"
+            return "in," + ip_addr + "," + ip + "," + scope.rstrip() + ",\r\n"
     return "out," + ip_addr + "," + ip + "," + ",,\r\n"
 
 def is_ipv4(ip):
@@ -42,17 +42,14 @@ def is_ipv4(ip):
     return True
 
 def is_valid_file(arg):
-    if not os.path.exists(arg):
-        return False
-    else:
-        return True
+    return os.path.exists(arg)
 
 if __name__=="__main__":
     parser = OptionParser()
     parser.add_option("-f", "--file", dest="filename", help="file of ip's to check")
     parser.add_option("-s", "--scopelist", default=False, dest="scopelist", help="file containing scope subnets")
-    parser.add_option("-o", "--outputfile", default=os.path.dirname(os.path.abspath(__file__)) + "\\" + "Scope-Check-" + time.strftime("%j-%m-%y_%H:%M:%S") + ".csv", dest="outputfile", help="output directory")
-    parser.add_option("-t", "--thread-speed", default="medium", dest="threadspeed", help="speed of scan\r\n--low - 8 threads\r\n--medium - 16 threads\r\n--fast - 32 threads\r\n--#yolo - 64 threads")
+    parser.add_option("-o", "--outputfile", default=os.path.dirname(os.path.abspath(__file__)) + "\\" + "Scope-Check-" + time.strftime("%j-%m-%y_%H.%M.%S") + ".csv", dest="outputfile", help="output directory")
+    parser.add_option("-t", "--thread-speed", default="medium", dest="threadspeed", help="speed of scan (by threads): low=8 medium=16 fast=32 #yolo=64 threads")
     (options, args) = parser.parse_args()
 
     if not options.filename or not options.scopelist:
@@ -67,9 +64,14 @@ if __name__=="__main__":
         'low':8,
         'medium':16,
         'fast':32,
-        '#yolo':64
+        'yolo':64
     }
-    threads = thread_options[options.threadspeed]
+    try:
+        threads = thread_options[options.threadspeed]
+    except:
+        "-t: invalid selection."
+        parser.print_help()
+        exit()
 
     scope_file = open(options.scopelist, 'r')
     scope_list = scope_file.readlines()
